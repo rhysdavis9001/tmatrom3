@@ -60,18 +60,15 @@ end
 %-----------------------------------------
 % derived parameters
 %-----------------------------------------
-
-% get suggested order for the wavefunction expansion by taking the maximum
-% over all possible shapes
 nmax = suggestedorder(kwave,Radius);
-
+assignin("base","nmax",nmax)
 %-----------------------------------------
 % setup the T-matrices
 %-----------------------------------------
 for k=1:AmmountUnique
     % setup T-matrix
-    tmat{k} = ghtmatrix(nmax,kwave,solver{k},Location);
-    
+    tmat{k} = ghtmatrix(nmax,kwave,solver{k},[0,0,0]);
+    assignin("base","Tobject",tmat)
     % print the T-matrix error estimate... based on Symmetry condition
     %fprintf('T-matrix %d (%s) error estimate %0.2e\n',k,...
     %    class(solver{k}.scatterer),tmat{k}.error());
@@ -103,12 +100,13 @@ xPosStart = 2;
  assignin("base","Posistions",pos)
 for j=1:numscat
     a{j} = regularwavefunctionexpansion(nmax,pos(j,:),p);
+    assignin("base","a",a)
 end
 
 % apply the T-matrices to the incident field
 for j=1:numscat
 
-    tmat{1}.setOrigin(pos(j,:));
+    tmat{1}.origin = pos(j,:);%tmat{1}.setOrigin(pos(j,:));
 
     b{j} = tmat{1} * a{j};    
 end
@@ -223,10 +221,10 @@ figure(2)
             % we temporarily set the origin for the T-matrix object to the position
             % of the jth scatterer... this allows the T-matrix to interact with
             % wavefunction expansions with the same origin
-            tmat{type(j)}.setOrigin(pos(j));
+            tmat{1}.origin = pos(j,:);
             
             % initialize sum
-            csum = regularzero(nmax,pos(j),kwave);
+            csum = regularzero(nmax,pos(j,:),kwave);
 
             % sum contributions from the other scatterers
             for i=1:numscat
@@ -234,14 +232,14 @@ figure(2)
                 if i~=j
                     
                     % get the expansion of c{i} at pos{j}
-                    csum = csum + regularwavefunctionexpansion(c{i},pos(j));
+                    csum = csum + regularwavefunctionexpansion(c{i},pos(j,:));
                     
                 end
                 
             end
             
             % apply the T-matrix to the sum
-            d{j} = c{j} - tmat{type(j)} * csum;
+            d{j} = c{j} - tmat{1} * csum;
             
         end
         
@@ -257,7 +255,7 @@ figure(2)
     function vec = pack(a)
         
         % create an array to hold the coefficients
-        vec = zeros(2*nmax+1,numscat);
+        vec = zeros(nmax*8+1,numscat);
 
         % copy the coefficients into the array
         for j=1:numscat
@@ -278,12 +276,12 @@ figure(2)
       
         
         % reshape the vector into an array
-        vec = reshape(vec,2*nmax+1,numscat);
+        vec = reshape(vec,8*nmax+1,numscat);
 
         % create radiating wavefunction expansions from the columns of the
         % array
         for j=1:numscat
-            a{j} = radiatingwavefunctionexpansion(nmax,pos(j),kwave,vec(:,j));
+            a{j} = radiatingwavefunctionexpansion(nmax,pos(j,:),kwave,vec(:,j));
         end
         
     end

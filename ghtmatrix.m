@@ -1,33 +1,15 @@
 % Create the T-matrix from far-field data.
 % 
-%  T = tmatrix(n,k,s) computes the T-matrix of order n for wavenumber k
+%  T = ghtmatrix(n,k,s) computes the T-matrix of order n for wavenumber k
 %  and origin [0;0;0]. The scatter is completely described by the object s
 %  which must be of class solver.
 %
-%  T = tmatrix(n,k,s,x0) returns the T-matrix with origin specified by x0.
+%  T = ghtmatrix(n,k,s,x0) returns the T-matrix with origin specified by x0.
 %
 % This code uses the numerically stable algorithm in Ganesh and Hawkins,
 % ANZIAM J. (50), p. C121--C136, 2008.
 % 
 % Stuart C. Hawkins - 20 April 2021
-
-% Copyright 2019-2022 Stuart C. Hawkins
-% 	
-% This file is part of TMATROM3
-% 
-% TMATROM3 is free software: you can redistribute it and/or modify	
-% it under the terms of the GNU General Public License as published by	
-% the Free Software Foundation, either version 3 of the License, or
-% (at your option) any later version.
-% 
-% TMATROM3 is distributed in the hope that it will be useful,
-% but WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-% GNU General Public License for more details.
-% 
-% You should have received a copy of the GNU General Public License
-% along with TMATROM3.  If not, see <http://www.gnu.org/licenses/>.
-
 
 function tmat = ghtmatrix(order,kwave,solver,origin)
 
@@ -73,7 +55,11 @@ farfield = solver.getFarField(points);
 % to adjust for the modified origin
 if max(abs(origin)) > 0
     
-    error('not yet implemented')
+    % compute dot product
+    dp = origin(:).'*points;
+
+    % compute scaling factor
+    farfield = spdiags(exp(1i*kwave*dp(:)),0,length(dp),length(dp)) * farfield;
     
 end
 

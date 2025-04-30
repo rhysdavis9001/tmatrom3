@@ -27,29 +27,10 @@
 %
 % Stuart C. Hawkins - 20 April 2021
 
-% Copyright 2019-2022 Stuart C. Hawkins
-% 	
-% This file is part of TMATROM3
-% 
-% TMATROM3 is free software: you can redistribute it and/or modify	
-% it under the terms of the GNU General Public License as published by	
-% the Free Software Foundation, either version 3 of the License, or
-% (at your option) any later version.
-% 
-% TMATROM3 is distributed in the hope that it will be useful,
-% but WITHOUT ANY WARRANTY; without even the implied warranty of
-% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-% GNU General Public License for more details.
-% 
-% You should have received a copy of the GNU General Public License
-% along with TMATROM3.  If not, see <http://www.gnu.org/licenses/>.
-
-
 classdef point_source < incident
     
     properties
         location
-        kwave
     end
     
     methods
@@ -60,8 +41,8 @@ classdef point_source < incident
 
         function self = point_source(location,kwave)           
             
-            % set wavenumber
-            self.kwave = kwave;
+            % call parent constructor
+            self = self@incident(kwave);
             
             % set location (as column vector)
             self.location = location(:);
@@ -108,7 +89,7 @@ classdef point_source < incident
             
             % reshape the return array to match points
             if length(n)==2
-                val = reshape(val,1,n(end));
+                val = reshape(val,n(end),1);
             else
                 val = reshape(val,n(2:end));
             end
@@ -197,7 +178,36 @@ classdef point_source < incident
 
         function cof = get_coefficients(self,centre,nmax)
 
-            error('not implemented yet')
+            % compute translation direction
+            x = self.location(:)-centre(:);
+
+            % convert to spherical polar coordinates
+            r = sqrt(sum(x.^2));
+            theta = acos(x(3)/r);
+            phi = atan2(x(2),x(1));
+
+            % get vector of orders
+            n = 0:nmax;
+
+            % get Bessel function
+            J = sphbesselh(n,self.kwave*r);
+
+            % compute the spherical harmonic part
+            Y = associatedLegendre(nmax,cos(theta));
+
+            % loop through the orders
+            for n=0:nmax
+
+                % compute coefficients using Colton and Kress, Inverse Acoustic
+                % and Electromagnetic Scattering Theory, Equation (2.43)
+                % Note: the conjugate of the spherical harmonic is included
+                % here
+                tmp{n+1} = 1i * self.kwave * J(n+1) * Y.get(n) .* exp(-1i*(-n:n)*phi);
+
+            end
+
+            % convert cell to vector
+            cof = cell2vec(tmp);
             
         end
         
