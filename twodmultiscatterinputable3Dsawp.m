@@ -29,7 +29,7 @@ Ksp = KInput/ScatterWidth;
 % setup incident plane wave
 %p = plane_wave(pi/2,kwave);
 % have seperate point source
-p = plane_wave([-10 0 0],kwave);
+p = point_source([-10 0 0],kwave);
 
 %-----------------------------------------
 % set up scatterers
@@ -52,7 +52,8 @@ Location = [0,0,0];
 AmmountUnique = 1;
 for k=1:AmmountUnique
     % create solver object
-    solver{k} = solverEllipsoidPenetrable(kwave,[],Location+[k,0,0],[Radius Radius Radius],RefractiveIndex,[1 Density],SolvePeram,2*SolvePeram);%solverNystromRobin(kwave,[],scatterer{k},0);
+    %solver{k} = solverEllipsoidPenetrable(kwave,[],Location+[k,0,0],[Radius Radius Radius],RefractiveIndex,[1 Density],SolvePeram,2*SolvePeram);%solverNystromRobin(kwave,[],scatterer{k},0);
+    solver{k} = solver_mie_penetrable2(kwave,[],RefractiveIndex,[1 Density],Radius);%solverNystromRobin(kwave,[],scatterer{k},0);
     % set Nystrom parameter
     solver{k}.setup
     
@@ -65,9 +66,9 @@ assignin("base","nmax",nmax)
 %-----------------------------------------
 % setup the T-matrices
 %-----------------------------------------
-for k=1:AmmountUnique
+for k=1:AmmountOfScatters
     % setup T-matrix
-    tmat{k} = ghtmatrix(nmax,kwave,solver{k},[0,0,0]);
+    tmat{k} = ghtmatrix(nmax,kwave,solver{1},[0,0,0]);
     assignin("base","Tobject",tmat)
     % print the T-matrix error estimate... based on Symmetry condition
     %fprintf('T-matrix %d (%s) error estimate %0.2e\n',k,...
@@ -115,15 +116,19 @@ end
 % wavefunction expansions into a vector...
 % setup an array right hand side coefficients (to pass to GMRES)
 rhs = pack(b);
+assignin("base","rhs",rhs)
+assignin("base","b",b)
 
 % set number of GMRES iterations
 nitns = min(100,floor(numscat*(2*nmax+1)/2));
 
-% Solve the linear system using GMRES
+% Solve the linear system using GMRES (the reshape functions are reshaping
+% to 2D not 3D at the moment.
 [x,flag,relres,iter,reshist] = gmres(@matrix_product,rhs,nitns,1e-8,1);
 
 % convert coefficients into wavefunction expansions
 c = unpack(x);
+
 
 disp('Computed: Iteratively solved the multiple scattering model')
 
@@ -138,15 +143,40 @@ disp('Computed: Iteratively solved the multiple scattering model')
 xstart = pos(numscat);
 
 xstop = pos(1);
-xsteps = 3000;
+xsteps = 30;
 yheight = 5;
 ysteps = 75;
+zheight = 5; 
+zsteps = 75;
 
 tx=linspace(xstart,xstop,xsteps);
-assignin("base","Xspace",tx)
+%assignin("base","Xspace",tx)
 ty = linspace(-yheight,yheight,ysteps);
-[x,y]=meshgrid(tx,ty);
-z = x+y*1i;
+tz = linspace(-zheight,zheight,zsteps);
+[x,y,z1] = meshgrid(tx,ty,tz);
+Domain(1,:,:,:) = x;
+Domain(2,:,:,:) = y;
+Domain(3,:,:,:) = z1;%= meshgrid(tx,ty,tz);
+%z = x+y*1i;
+maxrad = Radius;
+
+function MaskedDomain = ThreeDmasking(x,y,z,SphereRadius,SphereCentreX,SphereCentreY,SphereCentreZ,Domain)
+    [a, b, e] = meshgrid(x, y, z);
+    Distance = sqrt((a - SphereCentreX).^2 + (b - SphereCentreY).^2 + (e - SphereCentreZ).^2);
+    assignin("base","Distance",Distance);
+    Mask = Distance >= SphereRadius;
+
+    %MaskedDomain = Domain.*Mask;
+    MaskedDomain = Mask;
+end
+
+%mask = abs(z-pos(1)) < 1.1 * maxrad;
+
+mask = ThreeDmasking(tx,ty,tz,Radius*1.1,pos(1,1),pos(1,2),pos(1,3),Domain);
+
+%for j=1:numscat
+%    mask = mask | abs(z-pos(j)) < 1.1 * maxrad;
+%end
 
 PosStepsStart = 1;%round(pos(1)/xstart*xsteps);
 PosStepsEnd = xsteps;%xsteps;%round(pos(numscat)/xstart*xsteps);
@@ -156,23 +186,27 @@ SampleHeight = round(FourierMeasureHeight/yheight*ysteps);
 %assignin("base","End",PosStepsEnd)
 %assignin("base","Height",SampleHeight)
 % get the largest radius of the scatterers
-maxrad = solver{type(1)}.getRadius();
-for j=2:numscat
-    maxrad = max(maxrad,solver{type(j)}.getRadius());
-end
+
+%for j=2:numscat
+%    maxrad = max(maxrad,solver{type(j)}.getRadius());
+%end
 
 % get a mask for the scatterers
-mask = abs(z-pos(1)) < 1.1 * maxrad;
-for j=1:numscat
-    mask = mask | abs(z-pos(j)) < 1.1 * maxrad;
-end
+
 
 % get the scattered field... this is just the sum of the radiating fields
 % from each scatterer
-scatfield = c{1}.evaluate(z,~mask);
-for j=2:numscat
-    scatfield = scatfield + c{j}.evaluate(z,~mask);
-end
+z = class(c(1));
+disp("here")
+assignin("base", "C",c)
+disp(z)%scatfield = c{1}.evaluate(z,~mask);
+scatfield = c{1}.evaluate(Domain,mask);
+disp("This")
+%BE CAREFUL SINCE ONLY ONE OBJECT curly braces do not wor yet.
+
+%for j=2:numscat
+%    scatfield = scatfield + c.evaluate(Domain,mask);
+%end
 
 %-----------------------------------------
 % visualize the total field
@@ -183,12 +217,12 @@ disp ('Output total field at 25,000 grid points (Fig. 2)')
 
 
 % get the total field
-totalfield = scatfield + p.evaluate(z,~mask);
+totalfield = scatfield + p.evaluate(Domain,mask);
 %assignin("base","Totalfield",totalfield)
 %totalfield(round(SampleHeight/2)+round(ysteps/2),PosStepsEnd:PosStepsStart) = 100;
 
 % plot the total field
-surf(x,y,real(totalfield))
+surf(x(:,:,34),y(:,:,34),real(totalfield(:,:,34)))
 view([0 90]);
 shading interp;
 figure(2)
@@ -209,7 +243,10 @@ figure(2)
 % indented function to implement the matrix
 % product in GMRES
 %-----------------------------------------
-
+    function val = regularzero(n,x0,k)
+% its actually (n+1)^2 throughout
+        val = regularwavefunctionexpansion(n,x0,k,zeros((n+1)^2,1));
+    end
     function y = matrix_product(x)
         
         % convert vector of coefficients into wavefunction expansions
@@ -222,6 +259,7 @@ figure(2)
             % of the jth scatterer... this allows the T-matrix to interact with
             % wavefunction expansions with the same origin
             tmat{1}.origin = pos(j,:);
+            
             
             % initialize sum
             csum = regularzero(nmax,pos(j,:),kwave);
@@ -255,7 +293,7 @@ figure(2)
     function vec = pack(a)
         
         % create an array to hold the coefficients
-        vec = zeros(nmax*8+1,numscat);
+        vec = zeros((nmax+1)^2,numscat);
 
         % copy the coefficients into the array
         for j=1:numscat
@@ -276,7 +314,7 @@ figure(2)
       
         
         % reshape the vector into an array
-        vec = reshape(vec,8*nmax+1,numscat);
+        vec = reshape(vec,(nmax+1)^2,numscat);
 
         % create radiating wavefunction expansions from the columns of the
         % array
