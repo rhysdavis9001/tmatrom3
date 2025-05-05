@@ -10,9 +10,9 @@
 % the right peak for high resolution(one past pi) is larger, it might be
 % because of the signs
 
-for i = 20:20
+for i = 3:33
 tic
-    [KBetaarray(i), KspArray(i)] = twodmultiscatterinputable3Dsawp(18,0.5,4,0.6952*0.05*i);%+1000*(i-1));%+0.79);%0.6952);
+    [KBetaarray(i), KspArray(i)] = twodmultiscatterinputable3Dsawp(35,0.5,4,0.6952*0.05*i);%+1000*(i-1));%+0.79);%0.6952);
 disp("This is the " + i + " iteration")
 toc
 end

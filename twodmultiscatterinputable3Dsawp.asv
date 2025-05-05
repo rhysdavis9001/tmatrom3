@@ -23,7 +23,7 @@ p = point_source([-1 0 0],kwave);
 FourierMeasureHeight = ScatterWidth*1.2;
 
 Radius = ScatterWidth;
-Density = 1;
+Density = 1.1;
 RefractiveIndex = 1.5;
 %-----------------------------------------
 % setup the solvers
@@ -99,7 +99,7 @@ rhs = pack(b);
 %assignin("base","b",b)
 
 % set number of GMRES iterations
-nitns = min(100,floor(numscat*(2*nmax+1)/2));
+nitns = min(100,floor(numscat*((nmax+1)^2)/2));
 %disp(nitns + "this is nitis")
 % Solve the linear system using GMRES (the reshape functions are reshaping
 % to 2D not 3D at the moment.
@@ -181,19 +181,21 @@ end
 % get the total field
 totalfield = scatfield + p.evaluate(Domain,mask);
 %assignin("base","Totalfield",totalfield)
-totalfield(round(SampleHeight/2)+round(ysteps/2),PosStepsEnd:PosStepsStart) = 100;
+%totalfield(round(SampleHeight/2)+round(ysteps/2),PosStepsStart:PosStepsEnd,round(zsteps/2)) = 100;
 
 % plot the total field
-assignin("base","x",x)
-assignin("base","y",y)
-assignin("base","z1",z1)
+%assignin("base","x",x)
+%assignin("base","y",y)
+%assignin("base","z1",z1)
+
 assignin("base","totalfield",totalfield)
-surf(x(:,:,round(ysteps/2)),y(:,:,round(ysteps/2)),real(totalfield(:,:,round(ysteps/2))))
+surf(x(:,:,round(zsteps/2)),y(:,:,round(zsteps/2)),real(totalfield(:,:,round(zsteps/2))))
 view([0 90]);
 shading interp;
-figure(2)
+
 colorbar
 title('Total field ')
+figure(2)
 %-----------------------------------------
 % indented function to implement the matrix
 % product in GMRES
@@ -288,7 +290,7 @@ title('Total field ')
     end
 %Need to make this 3D (might not being in the right place yet
     function Slice = FourierSliceTaker(Field,FirstPoint,LastPoint,HeightAbove,xsteps,ysteps,zsteps)
-        Slice = Field(FirstPoint:LastPoint,round(HeightAbove/2)+round(ysteps/2),round(HeightAbove/2)+round(ysteps/2));
+        Slice = Field(round(HeightAbove/2)+round(ysteps/2),FirstPoint:LastPoint,round(HeightAbove/2)+round(ysteps/2));
     end
 %fourier(real(totalfield),10,450,1,0)
     function FreqeuencySpectrum = fourier(Sampleline)
