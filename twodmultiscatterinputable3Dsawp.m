@@ -1,6 +1,6 @@
 % Copyright 2014, 2015, 2016, 2017, 2018, 2022, 2023, 2024 Stuart C. Hawkins and M. Ganesh.
 
-function [KBeta ,Ksp] = twodmultiscatterinputable3Dsawp(AmmountOfScatters,ScatterWidth,DistRadiusRatio,KInput)
+function [KBeta ,Ksp ,Freq,Betascale] = twodmultiscatterinputable3Dsawp(AmmountOfScatters,ScatterWidth,DistRadiusRatio,KInput)
 %-----------------------------------------
 % set main parameters
 %-----------------------------------------
@@ -23,8 +23,8 @@ p = point_source([-1 0 0],kwave);
 FourierMeasureHeight = ScatterWidth*1.2;
 
 Radius = ScatterWidth;
-Density = 1.1;
-RefractiveIndex = 1.5;
+Density = 1;
+RefractiveIndex = 3;
 %-----------------------------------------
 % setup the solvers
 %-----------------------------------------
@@ -77,6 +77,7 @@ xPosStart = 2;
  for q = 1:numscat
      pos(q,:) = [((ScatterWidth*DistRadiusRatio)*(q-1)+xPosStart) 0 0];
  end
+ BetaScale = (2*pi*((800)-1)/(800*(pos(numscat,1)-pos(1,1))));
  %assignin("base","Posistions",pos)
 for j=1:numscat
     a{j} = regularwavefunctionexpansion(nmax,pos(j,:),p);
@@ -188,14 +189,14 @@ totalfield = scatfield + p.evaluate(Domain,mask);
 %assignin("base","y",y)
 %assignin("base","z1",z1)
 
-assignin("base","totalfield",totalfield)
-surf(x(:,:,round(ysteps/2)),y(:,:,round(zsteps/2)),real(totalfield(:,:,round(zsteps/2))))
-view([0 90]);
-shading interp;
+%assignin("base","totalfield",totalfield)
+%surf(x(:,:,round(ysteps/2)),y(:,:,round(zsteps/2)),real(totalfield(:,:,round(zsteps/2))))
+%view([0 90]);
+%shading interp;
 
-colorbar
-title('Total field ')
-figure(2)
+%colorbar
+%title('Total field ')
+%figure(2)
 %-----------------------------------------
 % indented function to implement the matrix
 % product in GMRES
@@ -307,12 +308,12 @@ figure(2)
         %xsteps/2 works and maybe since the transform is mirrored.
         %plot((0:length(FreqeuencySpectrum)-1)*(xsteps/2)/length(FreqeuencySpectrum),abs(FreqeuencySpectrum))
         %plot(fshift,abs(yshift)
-        xlabel("Frequency (scaled)")
-        ylabel("Frequency promanence this one")
-        ax = axis;
-        ax(1:2) = [0 2*pi];
-        axis(ax)
-        figure(3)
+        %xlabel("Frequency (scaled)")
+        %ylabel("Frequency promanence this one")
+        %ax = axis;
+        %ax(1:2) = [0 2*pi];
+        %axis(ax)
+        %figure(3)
 
     end
 
@@ -327,7 +328,7 @@ FLine = FourierSliceTaker(real(totalfield),PosStepsStart,PosStepsEnd,SampleHeigh
 FrequencySpec = fourier(FLine);
 
 %test = BetaCal(PosStepsStart,PosStepsEnd,tx);
-
+BetaScale = (2*pi*((xsteps)-1)/(xsteps*(pos(numscat,1)-pos(1,1))));
     function KValue = KCal(Frequency)
         BetaScale = (2*pi*((xsteps)-1)/(xsteps*(pos(numscat,1)-pos(1,1))));
         Positive = Frequency;%(150:end);
@@ -337,6 +338,7 @@ FrequencySpec = fourier(FLine);
         KValue = (index-1)*BetaScale;%1/krepi;
     end
 KBeta = KCal(FrequencySpec);
+Freq = FrequencySpec;
 %figure(5)
 %plot(test,abs(FrequencySpec))
 end

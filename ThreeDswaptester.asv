@@ -8,12 +8,17 @@
 %significant.
 %what is the sampling frequency should be linxpace delta 
 % the right peak for high resolution(one past pi) is larger, it might be
-% because of the signs
+% because of the signs betascale = 0.0923
+%take alot of slice with alot of scatterers near kd = pi (the cuttoff)
+%so start at k = pi/2 and slowly go down
 
-for i = 3:33
+
+for i = 0:100
 tic
-    [KBetaarray(i), KspArray(i)] = twodmultiscatterinputable3Dsawp(35,0.5,4,0.6952*0.05*i);%+1000*(i-1));%+0.79);%0.6952);
-disp("This is the " + i + " iteration")
+    %[KBetaarray(i), KspArray(i) ,freq(i,:)] = twodmultiscatterinputable3Dsawp(35,0.5,4,0.6952*0.05*i);%+1000*(i-1));%+0.79);%0.6952);
+    [KBetaarray(i), KspArray(i) ,freq(i,:)] = twodmultiscatterinputable3Dsawp(80,0.5,4,pi/2-0.01*i);
+    save()
+    disp("This is the " + i + " iteration")
 toc
 end
 %dont know dow to deal with the dropping out
@@ -21,7 +26,17 @@ end
 KspArray(any(KBetaarray > 3.3, 1)) = [];
 KBetaarray(any(KBetaarray > 3.3, 1)) = [];
 figure
-plot(2*KBetaarray,KspArray)
-title("That one")
+plot(KBetaarray,KspArray)
+title("penatrable spheres density = 10 refractive index = 10")
+xlabel("kbeta" ...
+    )
+ylabel("kinc")
+for i= 1:25
+
+    freq(:,i) = freq(:,i)*beta;
+end
+b0 = 0.0923*(0 :39);
+k0 = 0.6952*0.05*(15:25);
+surf(b0,k0,abs(freq(15:25,1:40)))
 %I thing I have to multiply y by 2 to normalise to the scatter wideth and
 %distance
