@@ -14,7 +14,7 @@ Ksp = KInput/ScatterWidth;
 % setup incident plane wave
 %p = plane_wave(pi/2,kwave);
 % have seperate point source
-p = point_source([-1 0 0],kwave);
+p = point_source([-2 0 0],kwave);
 
 
 %-----------------------------------------
@@ -23,7 +23,7 @@ p = point_source([-1 0 0],kwave);
 FourierMeasureHeight = ScatterWidth*1.2;
 
 Radius = ScatterWidth;
-Density = 1;
+Density = 1.1;
 RefractiveIndex = 3;
 %-----------------------------------------
 % setup the solvers
@@ -77,7 +77,7 @@ xPosStart = 2;
  for q = 1:numscat
      pos(q,:) = [((ScatterWidth*DistRadiusRatio)*(q-1)+xPosStart) 0 0];
  end
- BetaScale = (2*pi*((800)-1)/(800*(pos(numscat,1)-pos(1,1))));
+ 
  %assignin("base","Posistions",pos)
 for j=1:numscat
     a{j} = regularwavefunctionexpansion(nmax,pos(j,:),p);
@@ -121,11 +121,11 @@ disp('Computed: Iteratively solved the multiple scattering model')
 xstart = pos(1,1);
 
 xstop = pos(numscat,1);
-xsteps = 800;
-yheight = 5;
-ysteps = 75;
-zheight = 5; 
-zsteps = 75;
+xsteps = 1000;
+yheight = 2;
+ysteps = 40;
+zheight = 2; 
+zsteps = 40;
 
 tx=linspace(xstart,xstop,xsteps);
 %assignin("base","Xspace",tx)
@@ -164,11 +164,11 @@ SampleHeight = round(FourierMeasureHeight/yheight*ysteps);
 % get the scattered field... this is just the sum of the radiating fields
 % from each scatterer
 %disp(z)%
-mask = ThreeDmasking(tx,ty,tz,Radius*1.1,pos(1,1),pos(1,2),pos(1,3),Domain);
+mask = ThreeDmasking(tx,ty,tz,Radius*0.9,pos(1,1),pos(1,2),pos(1,3),Domain);
 scatfield = c{1}.evaluate(Domain,mask);
 
 for j=2:numscat
-      scatfield = scatfield + c{1}.evaluate(Domain,ThreeDmasking(tx,ty,tz,Radius*1.1,pos(j,1),pos(j,2),pos(j,3),Domain));
+      scatfield = scatfield + c{j}.evaluate(Domain,ThreeDmasking(tx,ty,tz,Radius*0.9,pos(j,1),pos(j,2),pos(j,3),Domain));
 end
 
 %-----------------------------------------
@@ -190,13 +190,13 @@ totalfield = scatfield + p.evaluate(Domain,mask);
 %assignin("base","z1",z1)
 
 %assignin("base","totalfield",totalfield)
-%surf(x(:,:,round(ysteps/2)),y(:,:,round(zsteps/2)),real(totalfield(:,:,round(zsteps/2))))
-%view([0 90]);
-%shading interp;
+surf(x(:,:,round(ysteps/2)),y(:,:,round(zsteps/2)),real(totalfield(:,:,round(zsteps/2))))
+view([0 90]);
+shading interp;
 
-%colorbar
-%title('Total field ')
-%figure(2)
+colorbar
+title('Total field scatterers')
+figure(2)
 %-----------------------------------------
 % indented function to implement the matrix
 % product in GMRES
@@ -301,10 +301,10 @@ totalfield = scatfield + p.evaluate(Domain,mask);
         %disp((1:n)*Betascale)
         %fshift = (-n/2:n/2-1)*((xsteps/2)/n);
         %yshift = fftshift(FreqeuencySpectrum);
-        plot((0:n-1)*Betascale,abs(FreqeuencySpectrum))
+        plot((0:30-1)*Betascale,abs(FreqeuencySpectrum(1:30)))
         %start from zero since fft starts from zero frequency
-        %figure 
-        %plot((1:length(Sampleline))*((xsteps)/length(Sampleline)),abs(FreqeuencySpectrum))
+        figure(3)
+        %plot((1:length(Sampleline))*((xsteps)/length(Samp(line)),abs(FreqeuencySpectrum))
         %xsteps/2 works and maybe since the transform is mirrored.
         %plot((0:length(FreqeuencySpectrum)-1)*(xsteps/2)/length(FreqeuencySpectrum),abs(FreqeuencySpectrum))
         %plot(fshift,abs(yshift)
